@@ -1,4 +1,4 @@
-OrigData <- read.csv2('C:/Users/LENOVO/Documents/Data science project/R/Flight_prediction/Dataset/Jan_2015_ontime.csv', sep = ',', header = TRUE, stringsAsFactors = FALSE)
+OrigData <- read.csv2('C:/Users/LENOVO/Documents/Data science project/R/flight_prediction/Dataset/Jan_2015_ontime.csv', sep = ',', header = TRUE, stringsAsFactors = FALSE)
 
 nrow(OrigData)
 
@@ -46,9 +46,9 @@ OrigData$DEST_AIRPORT_SEQ_ID <- NULL
 mismatched <- OrigData[OrigData$CARRIER != OrigData$UNIQUE_CARRIER,] #Check if there is no row when Unique Carrier is not equal to Carrier
 
 #Let drop Unique Carrier
-
 OrigData$UNIQUE_CARRIER <- NULL
 
+head(OrigData, 2)
 
 
 
