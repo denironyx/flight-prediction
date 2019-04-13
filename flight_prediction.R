@@ -82,31 +82,71 @@ tapply(onTimeData$ARR_DEL15, onTimeData$ARR_DEL15, length) ## We can see the num
 (6460 / (25664 + 6460))
 
 
-##Data Rule #4 Track how you manipulate
+          ##Data Rule #4 Track how you manipulate
+    
+    
+            ##Role of algorithm
+    
+      #Perform algortihm selection
+    
+    ##Compare factor dor algorithm function
+    # 1. Learning Type
+    # 2. Result type the algorithm produces
+    # 3. Complexity of the algorithm
+    # 4. Basic or enhanced data
+    
+    ## Learning type, our prediction is a supervised learning. 
+    ## Result type, regression and classification. - Classification, discrete values, true or false, small, medium or large
+    ## Complexity of the algorithm, keep it simple, eliminate 'ensemble' algorithms
+    ## Enhanced or basic, 
+    
+              ## Candidate algorithms
+    #Naive Bayes, #Logictic regression, #Decision rule -  logistic regression
+    
+    ## Initial selected algorithm - Logistic regression
+    # 1. Simple - easy to understand
+    # 2. Fast -  up to 100x faster
+    # 3. Stable to data changes
+    
 
 
-        ##Role of algorithm
 
-  #Perform algortihm selection
+                ##Training the model
 
-##Compare factor dor algorithm function
-# 1. Learning Type
-# 2. Result type the algorithm produces
-# 3. Complexity of the algorithm
-# 4. Basic or enhanced data
+##CARET Classification and Regression Training
 
-## Learning type, our prediction is a supervised learning. 
-## Result type, regression and classification. - Classification, discrete values, true or false, small, medium or large
-## Complexity of the algorithm, keep it simple, eliminate 'ensemble' algorithms
-## Enhanced or basic, 
+library(caret)
+set.seed(123456)
+featureCols <- c("ARR_DEL15", "DAY_OF_WEEK","CARRIER","DEST","ORIGIN","DEP_TIME_BLK")
 
-          ## Candidate algorithms
-#Naive Bayes, #Logictic regression, #Decision rule -  logistic regression
+onTimeDataFiltered <- onTimeData[, featureCols]
+inTrainRows <- createDataPartition(onTimeDataFiltered$ARR_DEL15, p = 0.70, list = FALSE)
+head(inTrainRows, 10)
 
-## Initial selected algorithm - Logistic regression
-# 1. Simple - easy to understand
-# 2. Fast -  up to 100x faster
-# 3. Stable to data changes
+
+## Training dataset
+trainDataFiltered <- onTimeDataFiltered[inTrainRows,]
+testDataFiltered <- onTimeDataFiltered[-inTrainRows,]
+
+##Checking if the data was correctly slitted into 70:30 
+nrow(trainDataFiltered) / (nrow(trainDataFiltered) + nrow(testDataFiltered))
+nrow(testDataFiltered) / (nrow(trainDataFiltered) + nrow(testDataFiltered))
+
+
+##Make the prediction
+logisticRegModel <- train(ARR_DEL15 ~ ., data = trainDataFiltered, method = "glm", family = "binomial")
+logisticRegModel
+
+
+##Evaluate the model against test data, interpret results
+logRegPrediction <- predict(logisticRegModel, testDataFiltered)
+logRegConfMat <- confusionMatrix(logRegPrediction, testDataFiltered[, "ARR_DEL15"])
+logRegConfMat
+
+## Random forest
+library(randomForest)
+rfModel <- randomForest(trainDataFiltered[-1], trainDataFiltered$ARR_DEL15, proximity = TRUE, importance = TRUE)
+
 
 
 
