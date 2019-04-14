@@ -143,18 +143,27 @@ logRegPrediction <- predict(logisticRegModel, testDataFiltered)
 logRegConfMat <- confusionMatrix(logRegPrediction, testDataFiltered[, "ARR_DEL15"])
 logRegConfMat
 
+
+## Working with memory in R
+memory.size(size = 160000)
+
+library(magrittr)
+sapply(ls, function(x) object.size(get(x))) %>% sort %>% tail(5)
+
+
 ## Random forest
 library(randomForest)
 rfModel <- randomForest(trainDataFiltered[-1], trainDataFiltered$ARR_DEL15, proximity = TRUE, importance = TRUE)
+rfValidation <- predict(rfModel, testDataFiltered)
+rfConfMat <- confusionMatrix(rfValidation, testDataFiltered[, "ARR_DEL15"])
+rfConfMat
 
 
 
 
+  ##Options for improving performance
 
-
-
-
-
+## Rethinking the problem
 
 
 
