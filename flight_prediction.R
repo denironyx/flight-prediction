@@ -1,3 +1,4 @@
+
 OrigData <- read.csv2('C:/Users/LENOVO/Documents/Data science project/R/flight_prediction/Dataset/Jan_2015_ontime.csv', sep = ',', header = TRUE, stringsAsFactors = FALSE)
 
 nrow(OrigData)
@@ -49,9 +50,15 @@ mismatched
 #Let drop Unique Carrier
 OrigData$UNIQUE_CARRIER <- NULL
 
+
+## Let drop CARRIER, DIVERTED AND TAIL_NUM: Since carrier and Diverted has no values and tailnum is has no significant to the model
+onTimeData$CARRIER <- NULL
+onTimeData$DIVERTED <- NULL
+onTimeData$TAIL_NUM <- NULL
+
 head(OrigData, 2)
 
-#$ Moldingg data
+str(OrigData)#$ Moldingg data
 
 #Checkinng for NA or missing rows and store the new rows in a variable called onTimeData
 onTimeData <- OrigData[!is.na(OrigData$ARR_DEL15) & OrigData$ARR_DEL15 != "" & !is.na(OrigData$DEP_DEL15) & OrigData$DEP_DEL15 != "",]
@@ -78,6 +85,7 @@ onTimeData$CARRIER <- as.factor(onTimeData$CARRIER)
 #Using tapply funtion to see the number of time flight was delayed 
 tapply(onTimeData$ARR_DEL15, onTimeData$ARR_DEL15, length) ## We can see the number of arrival delay.
 
+table(onTimeData$ARR_DEL15) ##
 #3 Let's compute the preverance of the number of flight delay
 (6460 / (25664 + 6460))
 
@@ -115,9 +123,26 @@ tapply(onTimeData$ARR_DEL15, onTimeData$ARR_DEL15, length) ## We can see the num
 
 ##CARET Classification and Regression Training
 
+
+##Create the training and test datasets
+
+
+
+##################################################
+##                                              ##
+## Predictive modelling from initial tutorial   ##
+##                                              ##    
+##################################################
+
 library(caret)
 set.seed(123456)
-featureCols <- c("ARR_DEL15", "DAY_OF_WEEK","CARRIER","DEST","ORIGIN","DEP_TIME_BLK")
+
+newfeature <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+modelfeature <- train(ARR_DEL15 ~., data = onTimeData, method = "lvq", preProcess = "scale", trControl = newfeature)
+featureImportance <-
+  
+  
+  featureCols <- c("ARR_DEL15", "DAY_OF_WEEK","CARRIER","DEST","ORIGIN","DEP_TIME_BLK")
 
 onTimeDataFiltered <- onTimeData[, featureCols]
 inTrainRows <- createDataPartition(onTimeDataFiltered$ARR_DEL15, p = 0.70, list = FALSE)
@@ -144,8 +169,12 @@ logRegConfMat <- confusionMatrix(logRegPrediction, testDataFiltered[, "ARR_DEL15
 logRegConfMat
 
 
+
+#CROSS VALIDATION
+
+
 ## Working with memory in R
-memory.size(size = 160000)
+memory.limit(size = 160000)
 
 library(magrittr)
 sapply(ls, function(x) object.size(get(x))) %>% sort %>% tail(5)
@@ -160,10 +189,129 @@ rfConfMat
 
 
 
-
-  ##Options for improving performance
+##Options for improving performance
 
 ## Rethinking the problem
+
+
+################################################
+##                                            ##
+## Improved Predictive modelling with feature ##
+##  elimination method and cross validation   ##    
+################################################
+
+
+
+set.seed(100)
+
+inTrainRow <- onTimeData 
+library(caret)
+
+inTrainRow <- createDataPartition(onTimeData$ARR_DEL15, p = 0.8, list = FALSE)
+
+##Step 2: Create the training data
+trainData <- onTimeData[inTrainRow,]
+
+##Step 3: Create the test dataset
+testData <- onTimeData[-inTrainRow,]
+
+## Store X and Y for later use
+x = trainData[,2:20]
+y = trainData$ARR_DEL15
+
+
+##Exploring the skimr package for descriptive statistics
+library(skimr)
+skimmed <- skim_to_wide(trainData)
+skimmed
+
+###########################################################
+## Feature selection using recursive feature elimination ##  
+###########################################################
+
+set.seed(10)
+options(warn = -1)## Reduce the number of warning displayed to 1
+
+
+#Keeps priority to the most important variables, iterate through by building models of given subset sizes
+
+# subsets <- c(1:7,13:17)
+
+library(dplyr)
+
+##Check through to see if there is any character datatype
+
+flight_data = trainData %>% mutate_if(is.character, as.factor)
+
+ctrl <- rfeControl(functions = rfFuncs,
+                   method = "repeatedcv",
+                   repeats = 3,
+                   verbose = FALSE)
+
+lmProfile <- rfe(x = flight_data[,1:17], y = flight_data$ARR_DEL15,
+                 sizes = 17,
+                 rfeControl = ctrl)
+
+lmProfile
+
+
+
+set.seed(12)
+#Train the model using random forest and predict on the training data itself
+model_flight <- train(ARR_DEL15 ~., data = trainData, method = "earth")
+fitted <- predict(model_flight)
+
+model_flight
+
+plot(model_flight, main = "Model Accuracy")
+
+## How to compute the number of importance
+varimp_flight <- varImp(model_flight)
+plot(varimp_flight, main = "Variable Importance of Flight Prediction")
+
+
+##Prediction
+predicted <- predict(model_flight, testData)
+head(predicted)
+
+confusionMatrix(reference = testData$ARR_DEL15, data = predicted, mode = 'everything')
+
+#############################################################################
+## Performing an hyper tuning to optimize the model for better performance ##
+##################################################################3##########
+
+## Define the training control
+fitControl <- trainControl(
+  method = 'cv',
+  number = 5,
+ savePredictions = 'final',
+  classProbs = T,
+  summaryFunction = twoClassSummary
+)
+
+trainData$ARR_TIME_BLK <- as.factor(trainData$ARR_TIME_BLK)
+## Hyper parameter tunning using  - tunelength
+set.seed(2019)
+
+trainData2 <- trainData
+trainData2$ARR_DEL15 <- make.names(trainData2$ARR_DEL15)
+model_flight2 = train(ARR_DEL15 ~., data = trainData2, method = 'earth', 
+                     tuneLength = 5, metric = 'ROC', trControl = fitControl)
+
+
+model_flight2
+
+## To prevent Error: `data` and `reference` should be factors with the same levels.
+testData2$ARR_DEL15 <- make.names(testData2$ARR_DEL15)
+testData2$ARR_DEL15 <- as.factor(testData2$ARR_DEL15)
+
+##Step 2: Predict on testData and Compute the confusion matrix
+predicted2 <- predict(model_flight2,testData2)
+confusionMatrix(reference = testData2$ARR_DEL15, data = predicted2, mode = 'everything', positive = 'X1.00')
+
+
+
+
 
 
 
